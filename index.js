@@ -53,8 +53,48 @@ const mainMenu = (chatId) => {
 │
 └─❰ 𝗞𝗔𝗡𝗗𝗔𝗟𝗔 𝗧𝗘𝗖𝗛 © 2026 ❱`
 
+    const ownerLink = `https://t.me/${OWNER.replace('@', '')}`
+
     const opts = {
         reply_markup: {
             inline_keyboard: [
                 [{ text: '⚡ Link My WhatsApp', callback_data: 'link_wa' }],
-                [{ text: '📖 How It Works', callback_data: 'how' }, { text: '💬 Contact Owner', url: `https://t.me/${OWNER
+                [{ text: '📖 How It Works', callback_data: 'how' }, { text: '💬 Contact Owner', url: ownerLink }],
+                [{ text: '📱 My Sessions', callback_data: 'sessions' }, { text: '🔳 Get QR Code', callback_data: 'get_qr' }],
+                [{ text: '🌐 Website', url: 'https://github.com/kandala20' }, { text: '👨‍💻 GitHub', url: 'https://github.com/kandala20' }]
+            ]
+        }
+    }
+    bot.sendMessage(chatId, text, opts)
+}
+
+bot.onText(/\/start/, (msg) => mainMenu(msg.chat.id))
+
+bot.on('callback_query', async (query) => {
+    const chatId = query.message.chat.id
+    const data = query.data
+    bot.answerCallbackQuery(query.id)
+
+    if (data === 'link_wa') {
+        bot.sendMessage(chatId, 'Choose a linking method:', {
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: '🔳 QR Code - 60s', callback_data: 'get_qr' }],
+                    [{ text: '⬅️ Back', callback_data: 'back' }]
+                ]
+            }
+        })
+    }
+
+    if (data === 'get_qr') {
+        const waitMsg = await bot.sendMessage(chatId, '⏳ *𝗞𝗔𝗡𝗗𝗔𝗟𝗔 𝗧𝗘𝗖𝗛®* generating QR...', { parse_mode: 'Markdown' })
+        try {
+            const { state, saveCreds } = await useMultiFileAuthState(`session_qr/${chatId}`)
+            const sock = makeWASocket({ 
+                auth: state, 
+                logger: pino({ level: 'silent' }), 
+                browser: Browsers.ubuntu('Chrome'),
+                printQRInTerminal: false
+            })
+            sock.ev.on('creds.update', saveCreds)
+            sock.ev.on('connection.update', async ({ qr,
