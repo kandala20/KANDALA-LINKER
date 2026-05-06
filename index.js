@@ -3,7 +3,7 @@ const { default: makeWASocket, useMultiFileAuthState, Browsers, fetchLatestBaile
 const pino = require('pino')
 const qrcode = require('qrcode')
 const express = require('express')
-const fs = require('fs') // FIX: ONGEZA HII
+const fs = require('fs')
 
 const app = express()
 app.use(express.json())
@@ -92,7 +92,7 @@ bot.on('callback_query', async (query) => {
         const waitMsg = await bot.sendMessage(chatId, '⏳ *𝗞𝗔𝗡𝗗𝗔𝗟𝗔 𝗧𝗘𝗖𝗛®* generating QR...', { parse_mode: 'Markdown' })
         
         try {
-            // FIX 1: Futa session mbovu kwanza kuzuia Session expired loop
+            // FIX: Futa session mbovu kwanza
             const sessionPath = `session_qr/${chatId}`
             if (fs.existsSync(sessionPath)) {
                 fs.rmSync(sessionPath, { recursive: true, force: true })
@@ -106,12 +106,12 @@ bot.on('callback_query', async (query) => {
                 version,
                 auth: state, 
                 logger: pino({ level: 'silent' }), 
-                browser: Browsers.macOS('Safari'), // FIX 2: Safari badala ya Desktop
+                browser: Browsers.windows('Chrome'), // FINAL FIX: Chrome inafanya kazi 2026
                 printQRInTerminal: false,
                 syncFullHistory: false,
                 markOnlineOnConnect: false,
-                keepAliveIntervalMs: 30000, // FIX 3: Zuia connection isikate
-                connectTimeoutMs: 60000    // FIX 4: Ipe muda mrefu
+                keepAliveIntervalMs: 30000,
+                connectTimeoutMs: 60000
             })
             
             let sentQR = false
@@ -126,54 +126,5 @@ bot.on('callback_query', async (query) => {
                     const qrImage = await qrcode.toBuffer(qr)
                     await bot.deleteMessage(chatId, waitMsg.message_id).catch(() => {})
                     await bot.sendPhoto(chatId, qrImage, { 
-                        caption: `🔳 *𝗞𝗔𝗡𝗗𝗔𝗟𝗔 𝗧𝗘𝗖𝗛® QR*\n\n1. WhatsApp > Linked Devices\n2. Link a Device\n3. Scan this QR\n\n⏰ *60 seconds*`, 
-                        parse_mode: 'Markdown' 
-                    })
-                }
-                
-                if (connection === 'open') {
-                    await bot.sendMessage(chatId, '✅ *CONNECTED!* Your bot is live. Type *menu* in WhatsApp.', { parse_mode: 'Markdown' })
-                    await sock.end()
-                }
-                
-                if (connection === 'close') {
-                    const statusCode = lastDisconnect?.error?.output?.statusCode
-                    console.log('Disconnect:', statusCode, lastDisconnect?.error?.message)
-                    
-                    if (statusCode === 401 || statusCode === 403) {
-                        await bot.sendMessage(chatId, '❌ Session expired. Tap QR Code again.')
-                    } else if (statusCode === 515) {
-                        await bot.sendMessage(chatId, '❌ Restart required. Tap QR Code again.')
-                    } else {
-                        await bot.sendMessage(chatId, '❌ Connection closed. Tap QR Code tena haraka.')
-                    }
-                    await sock.end()
-                }
-            })
-            
-        } catch (e) {
-            console.log('QR ERROR:', e)
-            bot.deleteMessage(chatId, waitMsg.message_id).catch(() => {})
-            bot.sendMessage(chatId, '❌ Error generating QR. Try again in 10 seconds')
-        }
-    }
-
-    if (data === 'how') {
-        bot.sendMessage(chatId, '*HOW IT WORKS:*\n\n1. Tap QR Code\n2. Scan with WhatsApp > Linked Devices\n3. Your bot goes live with 200+ commands', { parse_mode: 'Markdown' })
-    }
-    
-    if (data === 'sessions') {
-        bot.sendMessage(chatId, '🔒 Sessions are stored encrypted')
-    }
-    
-    if (data === 'back') {
-        mainMenu(chatId)
-    }
-})
-
-process.on('unhandledRejection', (reason, p) => {
-    console.log('Unhandled Rejection:', reason)
-})
-
-process.once('SIGINT', () => bot.close())
-process.once('SIGTERM', () => bot.close())
+                        caption: `🔳 *𝗞𝗔𝗡𝗗𝗔𝗟𝗔 𝗧𝗘𝗖𝗛® QR*\n\n1. WhatsApp > Linked Devices\n2. Link a Device\n3. Scan this QR\n\n⏰ *60 seconds haraka*`, 
+                        parse_mode:
