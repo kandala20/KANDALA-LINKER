@@ -1,10 +1,14 @@
 {
   "name": "kandala-linker",
+  "version": "1.0.0",
   "main": "index.js",
-  "scripts": { "start": "node index.js" },
+  "scripts": {
+    "start": "node index.js"
+  },
   "dependencies": {
     "node-telegram-bot-api": "^0.66.0",
-    "baileys": "^6.7.17",
-    "pino": "^8.19.0"
+    "baileys": "^6.7.9",
+    "pino": "^9.5.0",
+    "qrcode": "^1.5.4"
   }
 }
