@@ -188,3 +188,66 @@ bot.on('callback_query', async (query) => {
                                     const admins = meta.participants.filter(p => p.admin).map(p => p.id)
                                     if (!admins.includes(sender)) return sock.sendMessage(from, { text: '❌ Wewe sio admin!' })
                                     if (!admins.includes(sock.user.id)) return sock.sendMessage(from, { text: '❌ Nifanye admin kwanza!' })
+                                    const mentioned = msg.message.extendedTextMessage?.contextInfo?.mentionedJid
+                                    if (!mentioned?.length) return sock.sendMessage(from, { text: '*USAGE:* *kick @user*' })
+                                    await sock.groupParticipantsUpdate(from, mentioned, 'remove')
+                                    await sock.sendMessage(from, { text: `✅ @${mentioned[0].split('@')[0]} amekuwa kicked`, mentions: mentioned })
+                                }
+                                else if (text.toLowerCase().startsWith('*ai') || text.toLowerCase().startsWith('ai')) {
+                                    const query = text.replace(/^\*?ai\*?/i, '').trim()
+                                    if (!query) return sock.sendMessage(from, { text: '*AI USAGE:*\n\n*ai your question*' })
+                                    await sock.sendMessage(from, { text: `*𝗞𝗔𝗡𝗗𝗔𝗟𝗔 AI®*\n\nQ: ${query}\n\nA: Unganisha API ya AI hapa mkuu 😅` })
+                                }
+
+                                await sock.sendPresenceUpdate('paused', from)
+                            }
+                        })
+                    }
+
+                    if (connection === 'close') {
+                        delete global.activeSocks[chatId]
+                        const statusCode = lastDisconnect?.error?.output?.statusCode
+                        if (statusCode === 401 || statusCode === 403) {
+                            await bot.sendMessage(chatId, '❌ Namba imebanwa na WhatsApp. Jaribu namba nyingine ya WhatsApp Business.')
+                        } else {
+                            await bot.sendMessage(chatId, '❌ Connection closed. Jaribu pairing code tena.')
+                        }
+                    }
+                })
+
+            } catch (e) {
+                bot.sendMessage(chatId, '❌ Error: ' + e.message + '\n\nJaribu namba nyingine.')
+            }
+        })
+    }
+
+    if (data === 'get_qr') {
+        bot.sendMessage(chatId, '❌ *QR IMEBANWA MAY 2026*\n\nWhatsApp wamezima QR login. Tumia *Get Pairing Code* hapo juu.', { parse_mode: 'Markdown' })
+    }
+
+    if (data === 'how') {
+        bot.sendMessage(chatId, '*HOW IT WORKS 2026:*\n\n1. Gonga "Get Pairing Code"\n2. Tuma namba yako: 254712345678\n3. Utapata code ya 8 digits\n4. WhatsApp > Linked Devices > Link with phone number instead\n5. Weka code\n6. Bot goes live\n7. Type *menu* WhatsApp', { parse_mode: 'Markdown' })
+    }
+
+    if (data === 'sessions') {
+        const activeCount = Object.keys(global.activeSocks).length
+        bot.sendMessage(chatId, `🔒 Active sessions: ${activeCount}`)
+    }
+
+    if (data === 'back') {
+        mainMenu(chatId)
+    }
+})
+
+process.on('unhandledRejection', (reason, p) => {
+    console.log('Unhandled Rejection:', reason)
+})
+
+process.once('SIGINT', () => {
+    Object.values(global.activeSocks).forEach(s => s.end())
+    bot.close()
+})
+process.once('SIGTERM', () => {
+    Object.values(global.activeSocks).forEach(s => s.end())
+    bot.close()
+})
