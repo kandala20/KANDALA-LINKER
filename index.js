@@ -3,6 +3,7 @@ const { default: makeWASocket, useMultiFileAuthState, Browsers, fetchLatestBaile
 const pino = require('pino')
 const qrcode = require('qrcode')
 const express = require('express')
+const fs = require('fs') // FIX: ONGEZA HII
 
 const app = express()
 app.use(express.json())
@@ -17,7 +18,6 @@ if (!TOKEN) {
 }
 
 const bot = new TelegramBot(TOKEN)
-// FUTA HII LINE: bot.setWebHook(`${URL}/bot${TOKEN}`) 
 
 app.post(`/bot${TOKEN}`, (req, res) => {
     bot.processUpdate(req.body)
@@ -92,18 +92,26 @@ bot.on('callback_query', async (query) => {
         const waitMsg = await bot.sendMessage(chatId, '⏳ *𝗞𝗔𝗡𝗗𝗔𝗟𝗔 𝗧𝗘𝗖𝗛®* generating QR...', { parse_mode: 'Markdown' })
         
         try {
-            const { state, saveCreds } = await useMultiFileAuthState(`session_qr/${chatId}`)
+            // FIX 1: Futa session mbovu kwanza kuzuia Session expired loop
+            const sessionPath = `session_qr/${chatId}`
+            if (fs.existsSync(sessionPath)) {
+                fs.rmSync(sessionPath, { recursive: true, force: true })
+                console.log('Deleted old session for:', chatId)
+            }
+            
+            const { state, saveCreds } = await useMultiFileAuthState(sessionPath)
             const { version } = await fetchLatestBaileysVersion()
             
             const sock = makeWASocket({ 
                 version,
                 auth: state, 
                 logger: pino({ level: 'silent' }), 
-                browser: Browsers.macOS('Desktop'),
+                browser: Browsers.macOS('Safari'), // FIX 2: Safari badala ya Desktop
                 printQRInTerminal: false,
                 syncFullHistory: false,
                 markOnlineOnConnect: false,
-                generateHighQualityLinkPreview: true
+                keepAliveIntervalMs: 30000, // FIX 3: Zuia connection isikate
+                connectTimeoutMs: 60000    // FIX 4: Ipe muda mrefu
             })
             
             let sentQR = false
@@ -130,14 +138,14 @@ bot.on('callback_query', async (query) => {
                 
                 if (connection === 'close') {
                     const statusCode = lastDisconnect?.error?.output?.statusCode
-                    console.log('Disconnect:', statusCode)
+                    console.log('Disconnect:', statusCode, lastDisconnect?.error?.message)
                     
                     if (statusCode === 401 || statusCode === 403) {
                         await bot.sendMessage(chatId, '❌ Session expired. Tap QR Code again.')
                     } else if (statusCode === 515) {
                         await bot.sendMessage(chatId, '❌ Restart required. Tap QR Code again.')
                     } else {
-                        await bot.sendMessage(chatId, '❌ Connection closed. Try QR again in 10s.')
+                        await bot.sendMessage(chatId, '❌ Connection closed. Tap QR Code tena haraka.')
                     }
                     await sock.end()
                 }
