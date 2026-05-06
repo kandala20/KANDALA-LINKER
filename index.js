@@ -2,6 +2,13 @@ const TelegramBot = require('node-telegram-bot-api')
 const { default: makeWASocket, useMultiFileAuthState, Browsers } = require('baileys')
 const pino = require('pino')
 const qrcode = require('qrcode')
+const express = require('express') // ONGEZA HII
+
+// Dummy server kwa Render
+const app = express()
+const PORT = process.env.PORT || 3000
+app.get('/', (req, res) => res.send('𝗞𝗔𝗡𝗗𝗔𝗟𝗔 𝗧𝗘𝗖𝗛® Bot is Live'))
+app.listen(PORT, () => console.log(`Server running on ${PORT}`))
 
 const TOKEN = process.env.TELEGRAM_TOKEN
 const OWNER = '@kandala20'
@@ -72,7 +79,12 @@ bot.on('callback_query', async (query) => {
             const waitMsg = await bot.sendMessage(chatId, '⏳ *𝗞𝗔𝗡𝗗𝗔𝗟𝗔 𝗧𝗘𝗖𝗛®* inatengeneza code...', { parse_mode: 'Markdown' })
             try {
                 const { state, saveCreds } = await useMultiFileAuthState(`session/${chatId}`)
-                const sock = makeWASocket({ auth: state, logger: pino({ level: 'silent' }), browser: Browsers.ubuntu('Chrome') })
+                const sock = makeWASocket({ 
+                    auth: state, 
+                    logger: pino({ level: 'silent' }), 
+                    browser: Browsers.ubuntu('Chrome'),
+                    printQRInTerminal: false // ONGEZA HII
+                })
                 sock.ev.on('creds.update', saveCreds)
                 if (!sock.authState.creds.registered) {
                     const code = await sock.requestPairingCode(number)
@@ -89,7 +101,12 @@ bot.on('callback_query', async (query) => {
         const waitMsg = await bot.sendMessage(chatId, '⏳ *𝗞𝗔𝗡𝗗𝗔𝗟𝗔 𝗧𝗘𝗖𝗛®* inatengeneza QR...', { parse_mode: 'Markdown' })
         try {
             const { state, saveCreds } = await useMultiFileAuthState(`session_qr/${chatId}`)
-            const sock = makeWASocket({ auth: state, logger: pino({ level: 'silent' }), browser: Browsers.ubuntu('Chrome') })
+            const sock = makeWASocket({ 
+                auth: state, 
+                logger: pino({ level: 'silent' }), 
+                browser: Browsers.ubuntu('Chrome'),
+                printQRInTerminal: false // ONGEZA HII
+            })
             sock.ev.on('creds.update', saveCreds)
             sock.ev.on('connection.update', async ({ qr, connection }) => {
                 if (qr) {
