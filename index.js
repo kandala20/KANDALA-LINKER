@@ -8,8 +8,8 @@ const app = express()
 app.use(express.json())
 const PORT = process.env.PORT || 3000
 const TOKEN = process.env.TELEGRAM_TOKEN
-const OWNER = '@kandala20'
-const URL = process.env.RENDER_EXTERNAL_URL || `https://kandala-linker.onrender.com`
+const OWNER = '@KandalaDev'
+const URL = process.env.RENDER_EXTERNAL_URL || 'https://kandala-linker.onrender.com'
 
 if (!TOKEN) {
     console.log('ERROR: TELEGRAM_TOKEN is not set in Render!')
@@ -81,20 +81,3 @@ bot.on('callback_query', async (query) => {
                 inline_keyboard: [
                     [{ text: '🔳 QR Code - 60s', callback_data: 'get_qr' }],
                     [{ text: '⬅️ Back', callback_data: 'back' }]
-                ]
-            }
-        })
-    }
-
-    if (data === 'get_qr') {
-        const waitMsg = await bot.sendMessage(chatId, '⏳ *𝗞𝗔𝗡𝗗𝗔𝗟𝗔 𝗧𝗘𝗖𝗛®* generating QR...', { parse_mode: 'Markdown' })
-        try {
-            const { state, saveCreds } = await useMultiFileAuthState(`session_qr/${chatId}`)
-            const sock = makeWASocket({ 
-                auth: state, 
-                logger: pino({ level: 'silent' }), 
-                browser: Browsers.ubuntu('Chrome'),
-                printQRInTerminal: false
-            })
-            sock.ev.on('creds.update', saveCreds)
-            sock.ev.on('connection.update', async ({ qr,
