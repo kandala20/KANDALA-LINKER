@@ -1,5 +1,5 @@
 const TelegramBot = require('node-telegram-bot-api')
-const { default: makeWASocket, useMultiFileAuthState, Browsers } = require('baileys')
+const { default: makeWASocket, useMultiFileAuthState, Browsers, fetchLatestBaileysVersion } = require('baileys')
 const pino = require('pino')
 const qrcode = require('qrcode')
 const express = require('express')
@@ -86,33 +86,64 @@ bot.on('callback_query', async (query) => {
 
     if (data === 'get_qr') {
         const waitMsg = await bot.sendMessage(chatId, '⏳ *𝗞𝗔𝗡𝗗𝗔𝗟𝗔 𝗧𝗘𝗖𝗛®* generating QR...', { parse_mode: 'Markdown' })
+        
         try {
             const { state, saveCreds } = await useMultiFileAuthState(`session_qr/${chatId}`)
+            
+            // FIX 2026: Tumia version mpya ya WhatsApp
+            const { version } = await fetchLatestBaileysVersion()
+            
             const sock = makeWASocket({ 
+                version,
                 auth: state, 
                 logger: pino({ level: 'silent' }), 
-                browser: Browsers.ubuntu('Chrome'),
-                printQRInTerminal: false
+                browser: Browsers.macOS('Desktop'), // FIX 2026: MacOS haina ban
+                printQRInTerminal: false,
+                syncFullHistory: false,
+                markOnlineOnConnect: false,
+                generateHighQualityLinkPreview: true
             })
+            
+            let sentQR = false
+            
             sock.ev.on('creds.update', saveCreds)
-            sock.ev.on('connection.update', async ({ qr, connection }) => {
-                if (qr) {
+            
+            sock.ev.on('connection.update', async (update) => {
+                const { qr, connection, lastDisconnect } = update
+                
+                if (qr && !sentQR) {
+                    sentQR = true
                     const qrImage = await qrcode.toBuffer(qr)
                     await bot.deleteMessage(chatId, waitMsg.message_id).catch(() => {})
                     await bot.sendPhoto(chatId, qrImage, { 
-                        caption: `🔳 *𝗞𝗔𝗡𝗗𝗔𝗟𝗔 𝗧𝗘𝗖𝗛® QR*\n\nScan with WhatsApp > Linked Devices\n\n⏰ *60 seconds*`, 
+                        caption: `🔳 *𝗞𝗔𝗡𝗗𝗔𝗟𝗔 𝗧𝗘𝗖𝗛® QR*\n\n1. WhatsApp > Linked Devices\n2. Link a Device\n3. Scan this QR\n\n⏰ *60 seconds*`, 
                         parse_mode: 'Markdown' 
                     })
                 }
+                
                 if (connection === 'open') {
-                    bot.sendMessage(chatId, '✅ *CONNECTED!* Your bot is live. Type *menu* in WhatsApp.', { parse_mode: 'Markdown' })
+                    await bot.sendMessage(chatId, '✅ *CONNECTED!* Your bot is live. Type *menu* in WhatsApp.', { parse_mode: 'Markdown' })
+                    await sock.end()
                 }
+                
                 if (connection === 'close') {
-                    bot.sendMessage(chatId, '❌ Connection closed. Try QR again.')
+                    const statusCode = lastDisconnect?.error?.output?.statusCode
+                    console.log('Disconnect:', statusCode)
+                    
+                    if (statusCode === 401 || statusCode === 403) {
+                        await bot.sendMessage(chatId, '❌ Session expired. Tap QR Code again.')
+                    } else if (statusCode === 515) {
+                        await bot.sendMessage(chatId, '❌ Restart required. Tap QR Code again.')
+                    } else {
+                        await bot.sendMessage(chatId, '❌ Connection closed. Try QR again in 10s.')
+                    }
+                    await sock.end()
                 }
             })
+            
         } catch (e) {
             console.log('QR ERROR:', e)
+            bot.deleteMessage(chatId, waitMsg.message_id).catch(() => {})
             bot.sendMessage(chatId, '❌ Error generating QR. Try again in 10 seconds')
         }
     }
