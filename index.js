@@ -76,14 +76,13 @@ bot.on('callback_query', async (query) => {
     const data = query.data
     bot.answerCallbackQuery(query.id)
 
-    // PAIRING CODE - HII NDIO INAFANYA SASA
     if (data === 'get_code') {
         await bot.sendMessage(chatId, 'Tuma namba yako ya WhatsApp na country code\n\n*Mfano:* `254712345678`\n\n⚠️ Usianze na + au 0', { parse_mode: 'Markdown' })
 
         bot.once('message', async (msg) => {
-            if (msg.chat.id!== chatId) return
+            if (msg.chat.id !== chatId) return
             const number = msg.text.replace(/[^0-9]/g, '')
-
+            
             if (number.length < 11) {
                 return bot.sendMessage(chatId, '❌ Namba si sahihi. Hakikisha umeweka country code\n\nMfano: 254712345678')
             }
@@ -126,7 +125,6 @@ bot.on('callback_query', async (query) => {
                         global.activeSocks[chatId] = sock
                         await bot.sendMessage(chatId, '✅ *CONNECTED!* Bot yako iko live. Andika *menu* WhatsApp.', { parse_mode: 'Markdown' })
 
-                        // COMMAND HANDLER - COMMANDS 8
                         sock.ev.on('messages.upsert', async (m) => {
                             const msg = m.messages[0]
                             if (!msg.key.fromMe && msg.message) {
@@ -190,46 +188,3 @@ bot.on('callback_query', async (query) => {
                                     const admins = meta.participants.filter(p => p.admin).map(p => p.id)
                                     if (!admins.includes(sender)) return sock.sendMessage(from, { text: '❌ Wewe sio admin!' })
                                     if (!admins.includes(sock.user.id)) return sock.sendMessage(from, { text: '❌ Nifanye admin kwanza!' })
-                                    const mentioned = msg.message.extendedTextMessage?.contextInfo?.mentionedJid
-                                    if (!mentioned?.length) return sock.sendMessage(from, { text: '*USAGE:* *kick @user*' })
-                                    await sock.groupParticipantsUpdate(from, mentioned, 'remove')
-                                    await sock.sendMessage(from, { text: `✅ @${mentioned[0].split('@')[0]} amekuwa kicked`, mentions: mentioned })
-                                }
-                                else if (text.toLowerCase().startsWith('*ai') || text.toLowerCase().startsWith('ai')) {
-                                    const query = text.replace(/^\*?ai\*?/i, '').trim()
-                                    if (!query) return sock.sendMessage(from, { text: '*AI USAGE:*\n\n*ai your question*' })
-                                    await sock.sendMessage(from, { text: `*𝗞𝗔𝗡𝗗𝗔𝗟𝗔 AI®*\n\nQ: ${query}\n\nA: Unganisha API ya AI hapa mkuu 😅` })
-                                }
-
-                                await sock.sendPresenceUpdate('paused', from)
-                            }
-                        })
-                    }
-
-                    if (connection === 'close') {
-                        delete global.activeSocks[chatId]
-                        const statusCode = lastDisconnect?.error?.output?.statusCode
-                        if (statusCode === 401 || statusCode === 403) {
-                            await bot.sendMessage(chatId, '❌ Namba imebanwa na WhatsApp. Jaribu namba nyingine ya WhatsApp Business.')
-                        } else {
-                            await bot.sendMessage(chatId, '❌ Connection closed. Jaribu pairing code tena.')
-                        }
-                    }
-                })
-
-            } catch (e) {
-                bot.sendMessage(chatId, '❌ Error: ' + e.message + '\n\nJaribu namba nyingine.')
-            }
-        })
-    }
-
-    // QR CODE - IMEBANWA
-    if (data === 'get_qr') {
-        bot.sendMessage(chatId, '❌ *QR IMEBANWA MAY 2026*\n\nWhatsApp wamezima QR login. Tumia *Get Pairing Code* hapo juu.', { parse_mode: 'Markdown' })
-    }
-
-    if (data === 'how') {
-        bot.sendMessage(chatId, '*HOW IT WORKS 2026:*\n\n1. Gonga "Get Pairing Code"\n2. Tuma namba yako: 254712345678\n3. Utapata code ya 8 digits\n4. WhatsApp > Linked Devices > Link with phone number instead\n5. Weka code\n6. Bot goes live\n7. Type *menu* WhatsApp', { parse_mode: 'Markdown' })
-    }
-
-    if (data === 'sessions
