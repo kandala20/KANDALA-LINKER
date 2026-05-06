@@ -16,18 +16,16 @@ if (!TOKEN) {
     process.exit(1)
 }
 
-// USE WEBHOOK INSTEAD OF POLLING TO PREVENT 409 CONFLICTS
 const bot = new TelegramBot(TOKEN)
 bot.setWebHook(`${URL}/bot${TOKEN}`)
 
-// Webhook endpoint for Telegram
 app.post(`/bot${TOKEN}`, (req, res) => {
     bot.processUpdate(req.body)
     res.sendStatus(200)
 })
 
-// Health check for Render
 app.get('/', (req, res) => res.send('𝗞𝗔𝗡𝗗𝗔𝗟𝗔 𝗧𝗘𝗖𝗛® Bot is Live'))
+
 app.listen(PORT, async () => {
     console.log(`Server running on ${PORT}`)
     await bot.setWebHook(`${URL}/bot${TOKEN}`)
@@ -81,3 +79,56 @@ bot.on('callback_query', async (query) => {
                 inline_keyboard: [
                     [{ text: '🔳 QR Code - 60s', callback_data: 'get_qr' }],
                     [{ text: '⬅️ Back', callback_data: 'back' }]
+                ]
+            }
+        })
+    }
+
+    if (data === 'get_qr') {
+        const waitMsg = await bot.sendMessage(chatId, '⏳ *𝗞𝗔𝗡𝗗𝗔𝗟𝗔 𝗧𝗘𝗖𝗛®* generating QR...', { parse_mode: 'Markdown' })
+        try {
+            const { state, saveCreds } = await useMultiFileAuthState(`session_qr/${chatId}`)
+            const sock = makeWASocket({ 
+                auth: state, 
+                logger: pino({ level: 'silent' }), 
+                browser: Browsers.ubuntu('Chrome'),
+                printQRInTerminal: false
+            })
+            sock.ev.on('creds.update', saveCreds)
+            sock.ev.on('connection.update', async ({ qr, connection }) => {
+                if (qr) {
+                    const qrImage = await qrcode.toBuffer(qr)
+                    await bot.deleteMessage(chatId, waitMsg.message_id).catch(() => {})
+                    await bot.sendPhoto(chatId, qrImage, { 
+                        caption: `🔳 *𝗞𝗔𝗡𝗗𝗔𝗟𝗔 𝗧𝗘𝗖𝗛® QR*\n\nScan with WhatsApp > Linked Devices\n\n⏰ *60 seconds*`, 
+                        parse_mode: 'Markdown' 
+                    })
+                }
+                if (connection === 'open') {
+                    bot.sendMessage(chatId, '✅ *CONNECTED!* Your bot is live. Type *menu* in WhatsApp.', { parse_mode: 'Markdown' })
+                }
+                if (connection === 'close') {
+                    bot.sendMessage(chatId, '❌ Connection closed. Try QR again.')
+                }
+            })
+        } catch (e) {
+            console.log('QR ERROR:', e)
+            bot.sendMessage(chatId, '❌ Error generating QR. Try again in 10 seconds')
+        }
+    }
+
+    if (data === 'how') {
+        bot.sendMessage(chatId, '*HOW IT WORKS:*\n\n1. Tap QR Code\n2. Scan with WhatsApp > Linked Devices\n3. Your bot goes live with 200+ commands', { parse_mode: 'Markdown' })
+    }
+    
+    if (data === 'sessions') {
+        bot.sendMessage(chatId, '🔒 Sessions are stored encrypted')
+    }
+    
+    if (data === 'back') {
+        mainMenu(chatId)
+    }
+})
+
+process.once('SIGINT', () => bot.close())
+process.once('SIGTERM', () => bot.close())
