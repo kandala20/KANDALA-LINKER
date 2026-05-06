@@ -17,7 +17,7 @@ if (!TOKEN) {
 }
 
 const bot = new TelegramBot(TOKEN)
-bot.setWebHook(`${URL}/bot${TOKEN}`)
+// FUTA HII LINE: bot.setWebHook(`${URL}/bot${TOKEN}`) 
 
 app.post(`/bot${TOKEN}`, (req, res) => {
     bot.processUpdate(req.body)
@@ -28,8 +28,12 @@ app.get('/', (req, res) => res.send('𝗞𝗔𝗡𝗗𝗔𝗟𝗔 𝗧𝗘𝗖�
 
 app.listen(PORT, async () => {
     console.log(`Server running on ${PORT}`)
-    await bot.setWebHook(`${URL}/bot${TOKEN}`)
-    console.log('𝗞𝗔𝗡𝗗𝗔𝗟𝗔 𝗧𝗘𝗖𝗛® Linker running with WEBHOOK...')
+    try {
+        await bot.setWebHook(`${URL}/bot${TOKEN}`)
+        console.log('𝗞𝗔𝗡𝗗𝗔𝗟𝗔 𝗧𝗘𝗖𝗛® Linker running with WEBHOOK...')
+    } catch (e) {
+        console.log('Webhook error:', e.message)
+    }
 })
 
 const mainMenu = (chatId) => {
@@ -89,15 +93,13 @@ bot.on('callback_query', async (query) => {
         
         try {
             const { state, saveCreds } = await useMultiFileAuthState(`session_qr/${chatId}`)
-            
-            // FIX 2026: Tumia version mpya ya WhatsApp
             const { version } = await fetchLatestBaileysVersion()
             
             const sock = makeWASocket({ 
                 version,
                 auth: state, 
                 logger: pino({ level: 'silent' }), 
-                browser: Browsers.macOS('Desktop'), // FIX 2026: MacOS haina ban
+                browser: Browsers.macOS('Desktop'),
                 printQRInTerminal: false,
                 syncFullHistory: false,
                 markOnlineOnConnect: false,
@@ -159,6 +161,10 @@ bot.on('callback_query', async (query) => {
     if (data === 'back') {
         mainMenu(chatId)
     }
+})
+
+process.on('unhandledRejection', (reason, p) => {
+    console.log('Unhandled Rejection:', reason)
 })
 
 process.once('SIGINT', () => bot.close())
